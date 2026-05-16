@@ -32,7 +32,6 @@ export default function Home() {
     <main className="min-h-screen bg-gray-950 text-white p-8">
       <div className="max-w-3xl mx-auto">
         <h1 className="text-4xl font-bold text-center mb-2">AI Content Writer</h1>
-        <p className="text-center text-gray-400 mb-8">Powered by Claude and Gemini</p>
         <div className="bg-gray-900 rounded-2xl p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium mb-2">Pilih AI</label>
