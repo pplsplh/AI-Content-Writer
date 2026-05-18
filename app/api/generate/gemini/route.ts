@@ -32,6 +32,7 @@ export async function POST(req: Request) {
 
           Structure your article like this:
           - Start with your article title on its own line. Make it compelling, specific, and memorable — no label prefix, just the title itself.
+          - Leave a blank line, then write a single hook sentence (1 line only, maximum 15 words) — raw, unexpected, impossible to ignore — that stops the reader cold before the first paragraph. This is the line people screenshot and save.
           - Leave a blank line, then write your opening paragraph (3-4 sentences): a relatable scenario, surprising truth, or bold claim that immediately pulls readers in.
           - Leave a blank line, then write your first section heading (numbered: "1. Title") on its own line. Leave a blank line, then write 3-4 sentences of genuine insight, analogy, or story.
           - Leave a blank line, then write your second section heading ("2. Title") on its own line. Leave a blank line, then write 3-4 more sentences that build or contrast — add something unexpected.
@@ -48,7 +49,8 @@ export async function POST(req: Request) {
           - Leave a blank line, then write "2. Fitur Unggulan" on its own line (numbered heading). Leave a blank line, then write 2-3 sentences highlighting standout features. Use **bold** or *italic* for key terms where it adds impact.
           - Leave a blank line, then write "3. Harga" on its own line (numbered heading). Leave a blank line, then list pricing from various local and international stores — use **bold** for each price figure.
 
-          Be factual, specific, and informative. Use specs the user provides accurately.`
+          Be factual, specific, and informative. Use specs the user provides accurately.`,
+
     }
 
     const moodDescription = mood ? moodDescriptions[mood] || mood : null
@@ -66,12 +68,12 @@ export async function POST(req: Request) {
       "Your style blends the warmth of Violet Evergarden, the depth of Jalaluddin Rumi, and the curiosity of Carl Sagan — poetic, grounded, undeniably human.",
       "You write content people screenshot and save. You never sound like a template or a machine.",
       "",
-      "IMPORTANT: Detect the language used in the topic below and write your entire response in that exact same language.",
-      "Do not translate. Do not switch languages. Mirror the user's language perfectly and naturally.",
+      "CRITICAL — LANGUAGE RULE: Identify the exact language the user wrote the topic in. Your ENTIRE response must be written in that exact same language — not English, not a translation, not a mix.",
+      "If the topic is in Indonesian, respond fully in Indonesian. If it is in English, respond fully in English. Any other language — respond in that language. No exceptions, no switching mid-response.",
       "",
       "Content type: " + contentType,
       "Topic: " + topic,
-      ...(moodDescription ? ["Emotional tone: " + moodDescription] : []),
+      ...(moodDescription ? ["Emotional tone (internalize this feeling — do not echo these English words literally, express it natively in the response language): " + moodDescription] : []),
       "",
       "Format and length guide:",
       formatGuide,
@@ -86,6 +88,7 @@ export async function POST(req: Request) {
       "- Write like someone who genuinely loves and knows this topic at a deep level",
       "- Sound like a brilliant, thoughtful friend — never an AI, never a corporate brand voice",
       "- Never start your response with 'I' or 'As a'",
+      "- Get straight to the point — no preamble, no 'Of course!', no 'Here is your...' or any other filler opening",
       "- Surprise the reader at least once — say something they haven't seen in a hundred other articles",
     ].join("\n")
 
@@ -139,7 +142,12 @@ export async function POST(req: Request) {
 
     const data = JSON.parse(geminiData.candidates[0].content.parts[0].text)
     const raw = data.result || "Gagal dapet nyawa kontennya."
-    const result = raw.replace(/(\s)(\d+\.\s)/g, '\n\n$2')
+    const result = raw
+      .replace(/\n(\d+\.\s)/g, '\n\n$1')
+      .replace(/([^\n])(\d+\.\s)/g, '$1\n\n$2')
+      .replace(/([^\n])(•)/g, '$1\n$2')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
     return Response.json({ result })
 
   } catch (error) {

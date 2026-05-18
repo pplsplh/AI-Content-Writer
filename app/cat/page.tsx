@@ -45,6 +45,7 @@ export default function Home() {
               <option>Caption Instagram</option>
               <option>Artikel Blog</option>
               <option>Deskripsi Produk</option>
+              <option>Hook</option>
             </select>
           </div>
           <div>
