@@ -7,6 +7,10 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Data tidak lengkap.' }, { status: 400 })
     }
 
+    if (!process.env.GEMINI_API_KEY) {
+      return Response.json({ error: 'API key Gemini belum dikonfigurasi.' }, { status: 500 })
+    }
+
     const moodDescriptions: Record<string, string> = {
       "Senang": "joyful, light, full of warmth and small delights — like sunlight through curtains on a slow morning",
       "Sedih": "melancholic, tender, like remembering something beautiful that's gone and knowing it won't return",
@@ -140,7 +144,13 @@ export async function POST(req: Request) {
       return Response.json({ error: "Gagal dapet kontennya dari Gemini, coba lagi nanti!" }, { status: 500 })
     }
 
-    const data = JSON.parse(geminiData.candidates[0].content.parts[0].text)
+    let data: { result?: string }
+    try {
+      data = JSON.parse(geminiData.candidates[0].content.parts[0].text)
+    } catch {
+      console.error("Gemini response bukan JSON valid:", geminiData.candidates[0].content.parts[0].text)
+      return Response.json({ error: 'Gagal memproses respons dari Gemini, coba lagi nanti!' }, { status: 500 })
+    }
     const raw = data.result || "Gagal dapet nyawa kontennya."
     const result = raw
       .replace(/\n(\d+\.\s)/g, '\n\n$1')

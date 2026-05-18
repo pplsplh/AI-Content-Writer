@@ -88,9 +88,13 @@ export default function Home() {
   }
 
   async function copyResult() {
-    await navigator.clipboard.writeText(result)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    try {
+      await navigator.clipboard.writeText(result)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setError('Gagal menyalin teks. Coba salin manual ya.')
+    }
   }
 
   function downloadResult() {
@@ -187,7 +191,7 @@ export default function Home() {
                   <span className="text-lg">✦</span>
                   Claude
                   {aiModel === 'claude' && (
-                    <span className="top-1.5 right-1.5 w-1.0 h-1.0 rounded-full bg-purple-200" />
+                    <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-purple-300" />
                   )}
                 </button>
                 <button
@@ -201,7 +205,7 @@ export default function Home() {
                   <span className="text-lg">◈</span>
                   Gemini
                   {aiModel === 'gemini' && (
-                    <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded bg-purple-400" />
+                    <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded bg-sky-400" />
                   )}
                 </button>
               </div>
