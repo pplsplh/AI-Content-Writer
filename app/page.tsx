@@ -1,5 +1,6 @@
 'use client'
 import { useState, useRef, useEffect, type MutableRefObject, type Dispatch, type SetStateAction } from 'react'
+import Link from 'next/link'
 
 const CONTENT_TYPES = ['Caption Instagram', 'Artikel Blog', 'Deskripsi Produk']
 
@@ -504,6 +505,17 @@ export default function Home() {
 
       <div className="relative w-full max-w-7xl">
 
+        {/* Chat button — fixed to right edge */}
+        <Link
+          href="/chat"
+          className="fixed top-4 right-4 z-30 flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white px-3.5 py-2 rounded-xl border border-white/8 bg-[#0d1120]/80 hover:border-white/15 hover:bg-white/[0.07] transition-all duration-200 backdrop-blur-md shadow-lg shadow-black/30"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          Chat
+        </Link>
+
         {/* Riwayat button — fixed to left edge */}
         <button
           onClick={() => setHistoryOpen(true)}
@@ -543,65 +555,56 @@ export default function Home() {
         }>
 
           {/* Form Card */}
-          <div className={`bg-white/[0.03] border border-white/10 backdrop-blur-xl rounded-3xl p-8 shadow-2xl shadow-black/40 space-y-6${!hasGenerated ? ' w-full max-w-lg' : ''}`}>
+          <div className={`bg-white/[0.03] border border-white/10 backdrop-blur-xl rounded-3xl p-8 shadow-2xl shadow-black/40 space-y-6${!hasGenerated ? ' w-full max-w-lg' : ''}${compareMode && hasGenerated ? ' self-stretch' : ''}`}>
 
             {/* AI Model Selector */}
             <div>
               <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
                 Pilih AI Model
               </label>
-              {compareMode ? (
-                <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/8 bg-white/[0.03]">
-                  <span className="text-sm font-semibold text-purple-300">✦ Claude</span>
-                  <span className="text-slate-600 text-xs">+</span>
-                  <span className="text-sm font-semibold text-sky-300">◈ Gemini</span>
-                  <span className="ml-auto text-[11px] text-slate-600">Keduanya aktif</span>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => setAiModel('claude')}
-                    className={`relative flex items-center justify-center gap-2 p-3.5 rounded-xl font-semibold text-sm transition-all duration-200 border ${
-                      aiModel === 'claude'
-                        ? 'border-purple-500/60 bg-purple-500/15 text-purple-300 shadow-lg shadow-purple-500/10'
-                        : 'border-white/8 bg-white/[0.03] text-slate-400 hover:border-white/15 hover:text-white'
-                    }`}
-                  >
-                    <span className="text-lg">✦</span>
-                    Claude
-                    {aiModel === 'claude' && (
-                      <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-purple-300" />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => setAiModel('gemini')}
-                    className={`relative flex items-center justify-center gap-2 p-3.5 rounded-xl font-semibold text-sm transition-all duration-200 border ${
-                      aiModel === 'gemini'
-                        ? 'border-sky-500/60 bg-sky-500/15 text-sky-300 shadow-lg shadow-sky-500/10'
-                        : 'border-white/8 bg-white/[0.03] text-slate-400 hover:border-white/15 hover:text-white'
-                    }`}
-                  >
-                    <span className="text-lg">◈</span>
-                    Gemini
-                    {aiModel === 'gemini' && (
-                      <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded bg-sky-400" />
-                    )}
-                  </button>
-                </div>
-              )}
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => !compareMode && setAiModel('claude')}
+                  className={`relative flex items-center justify-center gap-2 p-3.5 rounded-xl font-semibold text-sm transition-all duration-200 border ${
+                    compareMode || aiModel === 'claude'
+                      ? 'border-purple-500/60 bg-purple-500/15 text-purple-300 shadow-lg shadow-purple-500/10'
+                      : 'border-white/8 bg-white/[0.03] text-slate-400 hover:border-white/15 hover:text-white'
+                  }`}
+                >
+                  <span className="text-lg">✦</span>
+                  Claude
+                  {(compareMode || aiModel === 'claude') && (
+                    <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-purple-300" />
+                  )}
+                </button>
+                <button
+                  onClick={() => !compareMode && setAiModel('gemini')}
+                  className={`relative flex items-center justify-center gap-2 p-3.5 rounded-xl font-semibold text-sm transition-all duration-200 border ${
+                    compareMode || aiModel === 'gemini'
+                      ? 'border-sky-500/60 bg-sky-500/15 text-sky-300 shadow-lg shadow-sky-500/10'
+                      : 'border-white/8 bg-white/[0.03] text-slate-400 hover:border-white/15 hover:text-white'
+                  }`}
+                >
+                  <span className="text-lg">◈</span>
+                  Gemini
+                  {(compareMode || aiModel === 'gemini') && (
+                    <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded bg-sky-400" />
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Agent Mode Toggle */}
-            <div className="mt-4 flex items-center justify-between p-4 rounded-xl border border-white/8 bg-white/[0.03]">
-              <div>
+            <div className="flex items-center justify-between p-4 rounded-xl border border-white/8 bg-white/[0.03]">
+              <div className="min-w-0 mr-4">
                 <p className="text-sm font-semibold text-white">Agent Mode</p>
                 <p className="text-xs text-slate-400">Aktifkan kemampuan riset untuk hasil yang lebih faktual dan mendalam.</p>
               </div>
               <button
                 onClick={() => setAgentMode(prev => !prev)}
-                className={`relative w-11 h-6 rounded-full transition-all duration-300 ${
+                className={`relative shrink-0 w-11 h-6 rounded-full transition-all duration-300 ${
                   agentMode
-                    ? aiModel === 'gemini' ? 'bg-sky-500' : 'bg-purple-600'
+                    ? compareMode || aiModel === 'gemini' ? 'bg-sky-500' : 'bg-purple-600'
                     : 'bg-white/10'
                 }`}
               >
@@ -613,13 +616,13 @@ export default function Home() {
 
             {/* Compare Mode Toggle */}
             <div className="flex items-center justify-between p-4 rounded-xl border border-white/8 bg-white/[0.03]">
-              <div>
+              <div className="min-w-0 mr-4">
                 <p className="text-sm font-semibold text-white">Mode Perbandingan</p>
                 <p className="text-xs text-slate-400">Generate Claude dan Gemini sekaligus, bandingkan hasilnya.</p>
               </div>
               <button
                 onClick={() => setCompareMode(prev => !prev)}
-                className={`relative w-11 h-6 rounded-full transition-all duration-300 ${compareMode ? 'bg-violet-600' : 'bg-white/10'}`}
+                className={`relative shrink-0 w-11 h-6 rounded-full transition-all duration-300 ${compareMode ? 'bg-violet-600' : 'bg-white/10'}`}
               >
                 <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-all duration-300 ${compareMode ? 'translate-x-5' : 'translate-x-0'}`} />
               </button>
