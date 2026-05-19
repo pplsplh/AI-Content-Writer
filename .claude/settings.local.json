@@ -11,13 +11,17 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Epul\\\\Documents\\\\My Website\\\\ai-content-writer\" -Recurse -Force)",
       "Bash(Select-Object -Property FullName)",
       "Bash(Sort-Object FullName)",
-      "Bash(Format-Table -HideTableHeaders)"
+      "Bash(Format-Table -HideTableHeaders)",
+      "Bash(npx tsc *)",
+      "Bash(npx next *)"
     ]
   },
   "mcpServers": {
     "my-first-mcp": {
       "command": "node",
-      "args": ["experiments/my-first-mcp.mjs"]
+      "args": [
+        "experiments/my-first-mcp.mjs"
+      ]
     }
   }
 }

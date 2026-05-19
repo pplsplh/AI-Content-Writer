@@ -1,7 +1,7 @@
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { topic, contentType, mood } = body
+    const { topic, contentType, mood, agentMode, contentLength } = body
 
     if (!topic?.trim() || !contentType) {
       return Response.json({ error: 'Data tidak lengkap.' }, { status: 400 })
@@ -32,18 +32,19 @@ export async function POST(req: Request) {
 
           Total under 250 words. Write like a real person posting at midnight — not a brand, not a bot, not a content calendar.`,
 
-      "Artikel Blog": `Write a complete, high-quality blog article using plain line breaks only — no markdown symbols of any kind.
+      "Artikel Blog": `Write a complete blog article. Plain line breaks only, no markdown symbols.
 
-          Structure your article like this:
-          - Start with your article title on its own line. Make it compelling, specific, and memorable — no label prefix, just the title itself.
-          - Leave a blank line, then write a single hook sentence (1 line only, maximum 15 words) — raw, unexpected, impossible to ignore — that stops the reader cold before the first paragraph. This is the line people screenshot and save.
-          - Leave a blank line, then write your opening paragraph (3-4 sentences): a relatable scenario, surprising truth, or bold claim that immediately pulls readers in.
-          - Leave a blank line, then write your first section heading (numbered: "1. Title") on its own line. Leave a blank line, then write 3-4 sentences of genuine insight, analogy, or story.
-          - Leave a blank line, then write your second section heading ("2. Title") on its own line. Leave a blank line, then write 3-4 more sentences that build or contrast — add something unexpected.
-          - Leave a blank line, then write your third section heading ("3. Title") on its own line. Leave a blank line, then write 3-4 sentences that go deeper — practical, philosophical, or emotionally resonant.
-          - Leave a blank line, then your closing paragraph (2-3 sentences): a reframe, quiet challenge, or honest truth the reader will carry with them.
+          Title on its own line — specific and human, not clickbait.
 
-          Write 800-1000 words. Be more insightful, more vivid, and more memorable than any other article on this exact topic.`,
+          One hook sentence (max 12 words) — the kind people screenshot.
+
+          Opening paragraph (3-4 sentences) — pull readers in through a scene or unexpected truth. Never start with "In this article".
+
+          3-4 sections, each with a numbered heading, then 3-5 sentences of real insight — stories, analogies, specific details.
+
+          Closing paragraph (2-3 sentences) — don't summarize. Leave them with a quiet truth or reframe.
+
+          700-900 words. Sound like a brilliant friend, not a content farm. Vary sentence length.`,
 
       "Deskripsi Produk": `Write a comprehensive product description. Use numbered section headings exactly as shown.
 
@@ -67,6 +68,30 @@ export async function POST(req: Request) {
     }
     const maxOutputTokens = maxTokensMap[contentType] ?? 1024
 
+    let researchContext = ''
+    if (agentMode) {
+      try {
+        const tavilyRes = await fetch('https://api.tavily.com/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            api_key: process.env.TAVILY_API_KEY,
+            query: topic,
+            max_results: 5,
+          }),
+        })
+        const tavilyData = await tavilyRes.json()
+        const results: string[] = (tavilyData.results ?? [])
+          .map((r: { content?: string }) => r.content)
+          .filter(Boolean)
+        if (results.length > 0) {
+          researchContext = `\n\nHASIL RISET INTERNET TENTANG TOPIK INI:\n${results.join('\n\n')}\n\nGunakan informasi di atas sebagai referensi faktual untuk memperkaya konten yang kamu tulis. Jangan mengarang fakta yang tidak ada di sini.`
+        }
+      } catch {
+        // kalau search gagal, lanjut generate biasa
+      }
+    }
+
     const prompt = [
       "You are a master content writer whose work makes other writers quietly envious.",
       "Your style blends the warmth of Violet Evergarden, the depth of Jalaluddin Rumi, and the curiosity of Carl Sagan — poetic, grounded, undeniably human.",
@@ -76,11 +101,13 @@ export async function POST(req: Request) {
       "If the topic is in Indonesian, respond fully in Indonesian. If it is in English, respond fully in English. Any other language — respond in that language. No exceptions, no switching mid-response.",
       "",
       "Content type: " + contentType,
-      "Topic: " + topic,
+      "Topic: " + topic + researchContext,
       ...(moodDescription ? ["Emotional tone (internalize this feeling — do not echo these English words literally, express it natively in the response language): " + moodDescription] : []),
       "",
       "Format and length guide:",
       formatGuide,
+      ...(contentLength === 'singkat' ? ["Length preference: Write a concise, tight version — aim for the shorter end of the format guide. Cut anything that isn't essential."] : []),
+      ...(contentLength === 'panjang' ? ["Length preference: Go expansive and deep — aim for the upper end of the format guide, with richer detail, more vivid examples, and deeper exploration of each idea."] : []),
       "",
       "Non-negotiable rules:",
       "- Plain text only — no markdown heading symbols (#). Avoid stray asterisks outside of the formatting rules below",
@@ -94,6 +121,7 @@ export async function POST(req: Request) {
       "- Never start your response with 'I' or 'As a'",
       "- Get straight to the point — no preamble, no 'Of course!', no 'Here is your...' or any other filler opening",
       "- Surprise the reader at least once — say something they haven't seen in a hundred other articles",
+      "- FAKTA: Jika Agent Mode aktif dan ada hasil riset, HANYA gunakan fakta yang eksplisit ada di hasil riset. Jangan menambah detail spesifik (tanggal, venue, angka) yang tidak disebutkan di sana. Jika tidak ada fakta cukup, tulis secara umum tanpa klaim spesifik.",
     ].join("\n")
 
     const timeoutMs = contentType === "Artikel Blog" ? 60000 : 30000
@@ -102,22 +130,12 @@ export async function POST(req: Request) {
 
     let geminiRes: Response
     try {
-      geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+      geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:streamGenerateContent?alt=sse&key=${process.env.GEMINI_API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            maxOutputTokens,
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: "object",
-              properties: {
-                result: { type: "string" },
-              },
-              required: ["result"],
-            },
-          },
+          generationConfig: { maxOutputTokens },
         }),
         signal: controller.signal,
       })
@@ -125,9 +143,8 @@ export async function POST(req: Request) {
       clearTimeout(timeout)
     }
 
-    const geminiData = await geminiRes.json()
-
-    if (!geminiRes.ok || geminiData.error) {
+    if (!geminiRes.ok) {
+      const errData = await geminiRes.json().catch(() => ({}))
       if (geminiRes.status === 401 || geminiRes.status === 403) {
         console.error("API key Gemini tidak valid")
         return Response.json({ error: "API key tidak valid, hubungi admin ya!" }, { status: 500 })
@@ -135,30 +152,49 @@ export async function POST(req: Request) {
       if (geminiRes.status === 429) {
         return Response.json({ error: "Terlalu banyak request, tunggu sebentar dan coba lagi!" }, { status: 429 })
       }
-      console.error("Error dari Gemini:", geminiData.error)
+      console.error("Error dari Gemini:", errData)
       return Response.json({ error: "Gemini lagi ngambek, coba lagi nanti!" }, { status: 500 })
     }
 
-    if (geminiData.candidates?.[0]?.content?.parts?.[0]?.text === undefined) {
-      console.error("Format response Gemini tidak sesuai:", geminiData)
-      return Response.json({ error: "Gagal dapet kontennya dari Gemini, coba lagi nanti!" }, { status: 500 })
-    }
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = geminiRes.body!.getReader()
+        const decoder = new TextDecoder()
+        let lineBuffer = ''
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            lineBuffer += decoder.decode(value, { stream: true })
+            const lines = lineBuffer.split('\n')
+            lineBuffer = lines.pop() ?? ''
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue
+              const jsonStr = line.slice(6).trim()
+              if (!jsonStr || jsonStr === '[DONE]') continue
+              try {
+                const chunk = JSON.parse(jsonStr)
+                const text = chunk.candidates?.[0]?.content?.parts?.[0]?.text
+                if (text) controller.enqueue(new TextEncoder().encode(text))
+              } catch {
+                // skip malformed chunks
+              }
+            }
+          }
+          controller.close()
+        } catch (err) {
+          controller.error(err)
+        }
+      },
+    })
 
-    let data: { result?: string }
-    try {
-      data = JSON.parse(geminiData.candidates[0].content.parts[0].text)
-    } catch {
-      console.error("Gemini response bukan JSON valid:", geminiData.candidates[0].content.parts[0].text)
-      return Response.json({ error: 'Gagal memproses respons dari Gemini, coba lagi nanti!' }, { status: 500 })
-    }
-    const raw = data.result || "Gagal dapet nyawa kontennya."
-    const result = raw
-      .replace(/\n(\d+\.\s)/g, '\n\n$1')
-      .replace(/([^\n])(\d+\.\s)/g, '$1\n\n$2')
-      .replace(/([^\n])(•)/g, '$1\n$2')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim()
-    return Response.json({ result })
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    })
 
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
