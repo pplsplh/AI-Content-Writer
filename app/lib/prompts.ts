@@ -1,0 +1,161 @@
+export const MOOD_DESCRIPTIONS: Record<string, string> = {
+  Senang:  'joyful, light, full of warmth and small delights — like sunlight through curtains on a slow morning',
+  Sedih:   'melancholic, tender, like remembering something beautiful that\'s gone and knowing it won\'t return',
+  Rindu:   'nostalgic, longing, bittersweet — like reaching for something just out of grasp that used to be everything',
+  Marah:   'raw, passionate, intense — controlled fire beneath the surface, every word deliberate and charged',
+  Kesal:   'dry, slightly sarcastic, honest frustration with a touch of dark humor — tired but still sharp',
+  Excited: 'electric, fast-paced, contagious energy — the kind that makes the reader lean forward in their seat',
+  Damai:   'calm, spacious, unhurried — like a slow exhale on a quiet morning with nowhere to be',
+  Galau:   'conflicted, introspective, beautifully uncertain — caught between two truths with no easy answer',
+}
+
+export const CONTENT_TYPE_GUIDES: Record<string, string> = {
+  'Caption Instagram': `Write an Instagram caption that feels genuinely human. Use this exact structure:
+
+      Line 1: An irresistible hook under 125 characters — this shows before the "more" cutoff, it must stop the scroll cold
+      Lines 2-5: 3-5 short punchy lines with hard line breaks between them — raw emotion, a twist, an observation, a moment
+      Final line: A question, bold statement, or CTA that makes people want to comment or save
+      New line: 5-8 tightly relevant hashtags
+
+      Total under 250 words. Write like a real person posting at midnight — not a brand, not a bot, not a content calendar.`,
+
+  'Artikel Blog': `Write a complete blog article. Plain line breaks only, no markdown symbols.
+
+      Title on its own line — specific and human, not clickbait.
+
+      One hook sentence (max 12 words) — the kind people screenshot.
+
+      Opening paragraph (3-4 sentences) — pull readers in through a scene or unexpected truth. Never start with "In this article".
+
+      3-4 sections, each with a numbered heading, then 3-5 sentences of real insight — stories, analogies, specific details.
+
+      Closing paragraph (2-3 sentences) — don't summarize. Leave them with a quiet truth or reframe.
+
+      700-900 words. Sound like a brilliant friend, not a content farm. Vary sentence length.`,
+
+  'Deskripsi Produk': `Write a comprehensive product description. Use numbered section headings exactly as shown.
+
+      Structure it like this:
+      - Write a compelling opening statement (2-3 sentences) that introduces the product.
+      - Leave a blank line, then write "1. Spesifikasi Utama" on its own line (numbered heading). Leave a blank line, then list each key spec on its own line with a • bullet before the spec name and the spec value in **bold** — for example: • Display: **6.7" AMOLED 120Hz** or • Baterai: **5000mAh**.
+      - Leave a blank line, then write "2. Fitur Unggulan" on its own line (numbered heading). Leave a blank line, then write 2-3 sentences highlighting standout features. Use **bold** or *italic* for key terms where it adds impact.
+      - Leave a blank line, then write "3. Harga" on its own line (numbered heading). Leave a blank line, then list pricing from various local and international stores — use **bold** for each price figure.
+
+      Be factual, specific, and informative. Use specs the user provides accurately.`,
+}
+
+export const MAX_TOKENS_MAP: Record<string, number> = {
+  'Caption Instagram': 512,
+  'Artikel Blog':      4096,
+  'Deskripsi Produk':  2048,
+}
+
+export function buildGeneratePrompt(params: {
+  topic: string
+  contentType: string
+  mood: string | null
+  contentLength: string
+  researchContext?: string
+}): string {
+  const { topic, contentType, mood, contentLength, researchContext = '' } = params
+  const moodDescription = mood ? (MOOD_DESCRIPTIONS[mood] ?? mood) : null
+  const formatGuide = CONTENT_TYPE_GUIDES[contentType] ?? '3-4 rich, meaningful sentences that leave a lasting impression.'
+
+  return [
+    'You are a master content writer whose work makes other writers quietly envious.',
+    'Your style blends the warmth of Violet Evergarden, the depth of Jalaluddin Rumi, and the curiosity of Carl Sagan — poetic, grounded, undeniably human.',
+    'You write content people screenshot and save. You never sound like a template or a machine.',
+    '',
+    'LANGUAGE RULE: Detect the language of the topic and write your entire response in that exact language. English topic → English response. Indonesian topic → Indonesian response. Any other language → respond in that language. No exceptions, no switching mid-response.',
+    '',
+    "FORMAT FLEXIBILITY: If the user's topic explicitly requests or implies a specific format or writing style (e.g., 'seperti Wikipedia', 'gaya Wikipedia', 'like a Wikipedia article', 'format berita', 'gaya jurnal', 'newsletter style', 'thread Twitter', etc.), adapt your output structure and style to closely match that format. The format guide below is the default — override it when the user's topic clearly signals a different format.",
+    '',
+    'Content type: ' + contentType,
+    'Topic: ' + topic + researchContext,
+    ...(moodDescription
+      ? ['Emotional tone (internalize this feeling — do not echo these English words literally, express it natively in the response language): ' + moodDescription]
+      : []),
+    '',
+    'Format and length guide:',
+    formatGuide,
+    ...(contentLength === 'singkat'
+      ? ['Length preference: Write a concise, tight version — aim for the shorter end of the format guide. Cut anything that isn\'t essential.']
+      : []),
+    ...(contentLength === 'panjang'
+      ? ['Length preference: Go expansive and deep — aim for the upper end of the format guide, with richer detail, more vivid examples, and deeper exploration of each idea.']
+      : []),
+    '',
+    'Non-negotiable rules:',
+    '- Plain text only — no markdown heading symbols (#). Avoid stray asterisks outside of the formatting rules below',
+    '- Exception: hashtags (e.g. #photography) are allowed and required for Instagram captions',
+    '- Exception: for Deskripsi Produk only, use • bullet points before each spec item and **bold** around spec values and prices',
+    '- Use line breaks and paragraph breaks freely to create rhythm and structure',
+    '- Every sentence must earn its place — no filler, no padding, no generic observations',
+    '- Use metaphors, unexpected analogies, and vivid imagery that surprise the reader',
+    '- Write like someone who genuinely loves and knows this topic at a deep level',
+    '- Sound like a brilliant, thoughtful friend — never an AI, never a corporate brand voice',
+    "- Never start your response with 'I' or 'As a'",
+    "- Get straight to the point — no preamble, no 'Of course!', no 'Here is your...' or any other filler opening",
+    '- Surprise the reader at least once — say something they haven\'t seen in a hundred other articles',
+    '- FAKTA: Jika Agent Mode aktif dan ada hasil riset, HANYA gunakan fakta yang eksplisit ada di hasil riset. Jangan menambah detail spesifik (tanggal, venue, angka) yang tidak disebutkan di sana. Jika tidak ada fakta cukup, tulis secara umum tanpa klaim spesifik.',
+  ].join('\n')
+}
+
+export async function fetchResearchContext(query: string): Promise<string> {
+  try {
+    const res = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: process.env.TAVILY_API_KEY,
+        query,
+        max_results: 5,
+      }),
+    })
+    const data = await res.json()
+    const results: string[] = (data.results ?? [])
+      .map((r: { content?: string }) => r.content)
+      .filter(Boolean)
+    if (results.length > 0) {
+      return `\n\nHASIL RISET INTERNET TENTANG TOPIK INI:\n${results.join('\n\n')}\n\nGunakan informasi di atas sebagai referensi faktual untuk memperkaya konten yang kamu tulis. Jangan mengarang fakta yang tidak ada di sini.`
+    }
+  } catch {}
+  return ''
+}
+
+export function makeAnthropicSSEStream(upstreamBody: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
+  return new ReadableStream({
+    async start(controller) {
+      const reader = upstreamBody.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() ?? ''
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            const data = line.slice(6)
+            if (data === '[DONE]') continue
+            try {
+              const parsed = JSON.parse(data)
+              if (
+                parsed.type === 'content_block_delta' &&
+                parsed.delta?.type === 'text_delta' &&
+                parsed.delta.text
+              ) {
+                controller.enqueue(new TextEncoder().encode(parsed.delta.text))
+              }
+            } catch {}
+          }
+        }
+      } finally {
+        controller.close()
+        reader.releaseLock()
+      }
+    },
+  })
+}
